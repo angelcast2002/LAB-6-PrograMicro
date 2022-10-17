@@ -7,12 +7,12 @@
  * 
  * 
  * Angel Castellanos 21700
- * Jose Pablo Santisteban 
+ * Jose Pablo Santisteban 21153
  */
 
 #include <stdio.h>
 
-  // For the CUDA runtime routines (prefixed with "cuda_")
+  
 #include <cuda_runtime.h>
 
 
@@ -23,6 +23,7 @@ dotProduct(const float* A, const float* B, float* C, int numElements)
 
     if (i < numElements)
     {
+        //multiplicacion de elementos de vectores
         C[i] = A[i] * B[i];
     }
 }
@@ -36,31 +37,27 @@ main(void)
     //Variable que contendra el resultado de la operacion
     float resultado = 0;
 
-    // Error code to check return values for CUDA calls
+    // codigo de error a manejar
     cudaError_t err = cudaSuccess;
 
-    // Print the vector length to be used, and compute its size
+    // imprime el tamaño de los vectores
     int numElements = 768;
     size_t size = numElements * sizeof(float);
     printf("[Suma de vectores de %d elementos]\n", numElements);
 
-    // Allocate the host input vector A
+    // Reserva de memoria para los vectores en el host 
     float* h_A = (float*)malloc(size);
-
-    // Allocate the host input vector B
     float* h_B = (float*)malloc(size);
-
-    // Allocate the host output vector C
     float* h_C = (float*)malloc(size);
 
-    // Verify that allocations succeeded
+    // verifica que la reserva de memoria haya sido exitosa
     if (h_A == NULL || h_B == NULL || h_C == NULL)
     {
         fprintf(stderr, "Error al asignar la memoria!\n");
         exit(EXIT_FAILURE);
     }
 
-    // Initialize the host input vectors
+    // Inicializa los vectores en el host 
     for (int i = 0; i < numElements; ++i)
     {
         float numRand1 = (500 + rand() % (5000 - 500)) / (float)RAND_MAX;
@@ -69,44 +66,44 @@ main(void)
         h_B[i] = numRand2;
     }
 
-    // Allocate the device input vector A
+    // Reserva de memoria para los vectores en el device
     float* d_A = NULL;
     err = cudaMalloc((void**)&d_A, size);
 
+    // verifica que la reserva de memoria haya sido exitosa en el device 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to allocate device vector A (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo en reserval la memoria, ver código %s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    // Allocate the device input vector B
+    // Reserva de memoria para los vectores en el device y verifica que la reserva de memoria haya sido exitosa
     float* d_B = NULL;
     err = cudaMalloc((void**)&d_B, size);
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to allocate device vector B (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo en reservar la memoria en el device del vector B, ver código %s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    // Allocate the device output vector C
     float* d_C = NULL;
     err = cudaMalloc((void**)&d_C, size);
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to allocate device vector C (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo en reservar la memoria en el device del vector C, ver código %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    // Copy the host input vectors A and B in host memory to the device input vectors in
-    // device memory
-    printf("Copy input data from the host memory to the CUDA device\n");
+    // Copia los vectores A y B del host al device
+    printf("Copiando los vectores del host al device...\n");
     err = cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
 
+    // verifica que la copia de memoria de los vectores A y B haya sido exitosa
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to copy vector A from host to device (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al copiar el vector A del host al device (código de error %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
@@ -114,45 +111,49 @@ main(void)
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to copy vector B from host to device (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al copiar el vector B del host al device (código de error %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
     // Launch the Vector Add CUDA Kernel
     int threadsPerBlock = 256;
     int blocksPerGrid = (numElements + threadsPerBlock - 1) / threadsPerBlock;
-    printf("CUDA kernel launch with %d blocks of %d threads\n", blocksPerGrid, threadsPerBlock);
+    printf("Lanzamiento del kernel CUda con  %d bloques de %d hilos\n", blocksPerGrid, threadsPerBlock);
     dotProduct <<<blocksPerGrid, threadsPerBlock >>> (d_A, d_B, d_C, numElements);
     err = cudaGetLastError();
 
+
+    // verifica que el lanzamiento del kernel haya sido exitoso
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to launch vectorAdd kernel (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al multiplicar los vectores (código de error %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    // Copy the device result vector in device memory to the host result vector
-    // in host memory.
-    printf("Copy output data from the CUDA device to the host memory\n");
+    // Copia el resultado del device (d_C) al host (h_C)
+    printf("Copiando el resultado del device al host...\n");
     err = cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to copy vector C from device to host (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al copiar el vector c del host al devide (código de error  %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
+    //prueba que la suma de los vectores sea correcta
     for (int i = 0; i < numElements; ++i)
     {
         float multiplicacion = h_A[i] * h_B[i];
         if (fabs(multiplicacion / h_C[i]) != 1)
         {
-            fprintf(stderr, "Result verification failed at element %d!\n", i);
+            fprintf(stderr, "Resultado de verificación falló en el elemento %d!\n", i);
             exit(EXIT_FAILURE);
         }
     }
-    printf("Test PASSED\n");
+    printf("Prueba pasada\n");
 
+
+    //Suma el resultado de la suma de los vectores
     for (int i = 0; i < numElements; i++)
     {
         resultado = resultado + (float)h_C[i];
@@ -162,12 +163,12 @@ main(void)
 
     
 
-    // Free device global memory
+    // Libera la memoria reservada en el device
     err = cudaFree(d_A);
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to free device vector A (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al liberar el vector A del device (código de error %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
@@ -175,7 +176,7 @@ main(void)
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to free device vector B (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al liberar el vector B del device (código de error %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
@@ -183,30 +184,26 @@ main(void)
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to free device vector C (error code %s)!\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo al liberar el vector C del device (código de error %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    // Free host memory
+    // Libera la memoria reservada en el host
     free(h_A);
     free(h_B);
     free(h_C);
 
-    // Reset the device and exit
-    // cudaDeviceReset causes the driver to clean up all state. While
-    // not mandatory in normal operation, it is good practice.  It is also
-    // needed to ensure correct operation when the application is being
-    // profiled. Calling cudaDeviceReset causes all profile data to be
-    // flushed before the application exits
+
+    // Reinicia el device y verifica que la reinicialización haya sido exitosa
     err = cudaDeviceReset();
 
     if (err != cudaSuccess)
     {
-        fprintf(stderr, "Failed to deinitialize the device! error=%s\n", cudaGetErrorString(err));
+        fprintf(stderr, "Fallo a desinicializar el device! error=%s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    printf("Done\n");
+    printf("Finalizado\n");
     return 0;
 }
 
